@@ -1,0 +1,45 @@
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# Node.js
+node_modules/
+build/
+.env
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnp/
+.pnp.js
+
+# Machine Learning Models and Data
+*.pkl
+*.bin
+*.h5
+*.onnx
+*.pb
+*.pt
+*.pth
+*.zip
+*.csv
+*.json
+
+# Specific files to exclude
+sentiment_model.pkl
+vectorizer.pkl
+sentiment140.zip
+testdata.manual.2009.06.14.csv
+training.1600000.processed.noemoticon.csv
+API/NEWSAPI.txt
+backend/sp500.csv
+backend/*.csv
+frontend/public/data/*.csv
+frontend/public/data/*.json
