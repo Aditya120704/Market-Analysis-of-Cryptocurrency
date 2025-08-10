@@ -1,0 +1,13 @@
+Flask
+Flask-Cors
+requests
+joblib
+yfinance
+pandas
+tensorflow
+scikit-learn
+openpyxl
+ruptures
+numpy
+xgboost
+pandas_ta

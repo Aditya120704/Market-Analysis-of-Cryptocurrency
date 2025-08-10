@@ -1,12 +1,16 @@
 import joblib
 import requests
 import sys
+import os
+
+# Define the absolute path to the models directory
+MODELS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'models')
 
 def get_news_sentiment():
     try:
         # Load the model and vectorizer
-        model = joblib.load('sentiment_model.pkl')
-        vectorizer = joblib.load('vectorizer.pkl')
+        model = joblib.load(os.path.join(MODELS_DIR, 'sentiment_model.pkl'))
+        vectorizer = joblib.load(os.path.join(MODELS_DIR, 'vectorizer.pkl'))
     except FileNotFoundError as e:
         print(f"Error loading model or vectorizer: {e}", file=sys.stderr)
         return {"error": "Model or vectorizer not found", "details": str(e)}
@@ -42,10 +46,16 @@ def get_news_sentiment():
             if headline:
                 try:
                     headline_vec = vectorizer.transform([headline])
-                    sentiment = model.predict(headline_vec)[0]
+                    sentiment_proba = model.predict_proba(headline_vec)[0]
+                    if sentiment_proba[1] > sentiment_proba[0]:
+                        sentiment_label = "Positive"
+                    elif sentiment_proba[0] > sentiment_proba[1]:
+                        sentiment_label = "Negative"
+                    else:
+                        sentiment_label = "Neutral"
                     sentiment_data.append({
                         'headline': headline,
-                        'sentiment': "Positive" if sentiment == 4 else "Negative",
+                        'sentiment': sentiment_label,
                         'publishedAt': published_at,
                         'url': article_url
                     })
@@ -59,8 +69,8 @@ def get_news_sentiment():
 
 def get_overall_market_sentiment():
     try:
-        model = joblib.load('sentiment_model.pkl')
-        vectorizer = joblib.load('vectorizer.pkl')
+        model = joblib.load(os.path.join(MODELS_DIR, 'sentiment_model.pkl'))
+        vectorizer = joblib.load(os.path.join(MODELS_DIR, 'vectorizer.pkl'))
     except FileNotFoundError as e:
         print(f"Error loading model or vectorizer: {e}", file=sys.stderr)
         return {"error": "Model or vectorizer not found", "details": str(e)}
@@ -86,12 +96,12 @@ def get_overall_market_sentiment():
             headline = article['title']
             if headline:
                 headline_vec = vectorizer.transform([headline])
-                sentiment = model.predict(headline_vec)[0]
-                if sentiment == 4: # Positive
+                sentiment_proba = model.predict_proba(headline_vec)[0]
+                if sentiment_proba[1] > sentiment_proba[0]:
                     positive_count += 1
-                elif sentiment == 0: # Negative
+                elif sentiment_proba[0] > sentiment_proba[1]:
                     negative_count += 1
-                else: # Assuming anything else is neutral for simplicity with this model
+                else:
                     neutral_count += 1
         
         total_articles = len(articles)
@@ -117,24 +127,46 @@ def get_overall_market_sentiment():
         print(f"No articles found for overall sentiment or unexpected NewsAPI response structure: {response_json}", file=sys.stderr)
         return {"error": "No articles found for overall sentiment", "details": response_json}
 
+def get_sentiment_score():
+    sentiment_data = get_overall_market_sentiment()
+    if "error" in sentiment_data:
+        return 0 # Return a neutral score in case of an error
+    
+    positive_count = sentiment_data.get("positive_articles", 0)
+    negative_count = sentiment_data.get("negative_articles", 0)
+    total_articles = sentiment_data.get("total_articles", 1) # Avoid division by zero
+    
+    if total_articles == 0:
+        return 0 # Return neutral if no articles
+        
+    return (positive_count - negative_count) / total_articles
+
 def get_currency_sentiment(currency_name: str):
     try:
-        model = joblib.load('sentiment_model.pkl')
-        vectorizer = joblib.load('vectorizer.pkl')
+        model = joblib.load(os.path.join(MODELS_DIR, 'sentiment_model.pkl'))
+        vectorizer = joblib.load(os.path.join(MODELS_DIR, 'vectorizer.pkl'))
     except FileNotFoundError as e:
         print(f"Error loading model or vectorizer: {e}", file=sys.stderr)
         return {"error": "Model or vectorizer not found", "details": str(e)}
 
-    try:
-        api_key = '350b3451917542d6bcfeb8d4a780e197'
-        # Fetch news for the specific currency
-        url = f'https://newsapi.org/v2/everything?q={currency_name}&apiKey={api_key}'
-        response = requests.get(url)
-        response.raise_for_status()
-        response_json = response.json()
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching news for {currency_name}: {e}", file=sys.stderr)
-        return {"error": f"Failed to fetch news for {currency_name}", "details": str(e)}
+    api_key = '350b3451917542d6bcfeb8d4a780e197'
+
+    # Try a sequence of queries to improve hit rate
+    queries = [currency_name, f"{currency_name} crypto", f"{currency_name} coin", f"{currency_name} token"]
+    response_json = {"articles": []}
+
+    for q in queries:
+        try:
+            url = f'https://newsapi.org/v2/everything?q={q}&apiKey={api_key}'
+            response = requests.get(url)
+            response.raise_for_status()
+            tmp = response.json()
+            if 'articles' in tmp and tmp['articles']:
+                response_json = tmp
+                break
+        except requests.exceptions.RequestException as e:
+            print(f"Error fetching news for {q}: {e}", file=sys.stderr)
+            continue
 
     if 'articles' in response_json and response_json['articles']:
         articles = response_json['articles']
@@ -146,10 +178,16 @@ def get_currency_sentiment(currency_name: str):
             if headline:
                 try:
                     headline_vec = vectorizer.transform([headline])
-                    sentiment = model.predict(headline_vec)[0]
+                    sentiment_proba = model.predict_proba(headline_vec)[0]
+                    if sentiment_proba[1] > sentiment_proba[0]:
+                        sentiment_label = "Positive"
+                    elif sentiment_proba[0] > sentiment_proba[1]:
+                        sentiment_label = "Negative"
+                    else:
+                        sentiment_label = "Neutral"
                     sentiment_data.append({
                         'headline': headline,
-                        'sentiment': "Positive" if sentiment == 4 else "Negative",
+                        'sentiment': sentiment_label,
                         'publishedAt': published_at,
                         'url': article_url
                     })
@@ -158,12 +196,13 @@ def get_currency_sentiment(currency_name: str):
         return sentiment_data
     else:
         print(f"No articles found for {currency_name} or unexpected NewsAPI response structure: {response_json}", file=sys.stderr)
-        return {"error": f"No articles found for {currency_name}", "details": response_json}
+        # Return empty list instead of error so UI can display 'no headlines' message
+        return []
 
 def get_overall_currency_sentiment(currency_name: str):
     try:
-        model = joblib.load('sentiment_model.pkl')
-        vectorizer = joblib.load('vectorizer.pkl')
+        model = joblib.load(os.path.join(MODELS_DIR, 'sentiment_model.pkl'))
+        vectorizer = joblib.load(os.path.join(MODELS_DIR, 'vectorizer.pkl'))
     except FileNotFoundError as e:
         print(f"Error loading model or vectorizer: {e}", file=sys.stderr)
         return {"error": "Model or vectorizer not found", "details": str(e)}
@@ -188,18 +227,19 @@ def get_overall_currency_sentiment(currency_name: str):
             headline = article['title']
             if headline:
                 headline_vec = vectorizer.transform([headline])
-                sentiment = model.predict(headline_vec)[0]
-                if sentiment == 4: # Positive
+                sentiment_proba = model.predict_proba(headline_vec)[0]
+                if sentiment_proba[1] > sentiment_proba[0]:
                     positive_count += 1
-                elif sentiment == 0: # Negative
+                elif sentiment_proba[0] > sentiment_proba[1]:
                     negative_count += 1
-                else: # Assuming anything else is neutral for simplicity with this model
+                else:
                     neutral_count += 1
         
         total_articles = len(articles)
         if total_articles == 0:
             return {"overall_sentiment": "Neutral", "details": "No articles to analyze"}
 
+        # Determine overall sentiment based on counts
         if positive_count > negative_count and positive_count > neutral_count:
             overall_sentiment = "Positive"
         elif negative_count > positive_count and negative_count > neutral_count:
@@ -217,3 +257,19 @@ def get_overall_currency_sentiment(currency_name: str):
     else:
         print(f"No articles found for overall {currency_name} sentiment or unexpected NewsAPI response structure: {response_json}", file=sys.stderr)
         return {"error": f"No articles found for overall {currency_name} sentiment", "details": response_json}
+
+def get_fear_and_greed_index():
+    """
+    Fetches the Fear & Greed Index from the alternative.me API.
+    """
+    url = "https://api.alternative.me/fng/?limit=1"
+    try:
+        response = requests.get(url)
+        response.raise_for_status()  # Raise an exception for HTTP errors
+        data = response.json()
+        if data and 'data' in data and len(data['data']) > 0:
+            return data['data'][0]
+        else:
+            return {"error": "No data found"}
+    except requests.exceptions.RequestException as e:
+        return {"error": f"API request failed: {e}"}
