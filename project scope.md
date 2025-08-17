@@ -57,21 +57,11 @@ This section outlines future enhancements and features for the crypto analysis a
 
 ### 1. Prediction Model Enhancements
 - [ ] **Advanced Feature Engineering:**
-  - [ ] **On-Chain Metrics:** Active Wallet Addresses, Transaction Volume & Count, Network Hash Rate.
   - [ ] **Macroeconomic Data:** S&P 500 / Nasdaq Composite, US Dollar Index (DXY), Inflation Rates (CPI).
 - [ ] **Advanced Model Exploration:**
   - [ ] **Prophet:** Investigate for time-series with seasonal patterns.
 
 ### 2. New Value-Added Features
-- [ ] **Portfolio Tracker:**
-  - Allow users to input their crypto holdings.
-  - Track real-time portfolio value.
-  - Display Profit & Loss (P&L) metrics.
-  - Visualize asset allocation with a pie chart.
-- [ ] **Real-Time Alerting System:**
-  - Price alerts for specific crypto targets.
-  - Sentiment shift alerts.
-  - Technical indicator alerts (e.g., RSI crossing a threshold).
 - [ ] **Expanded Data Visualization:**
   - [ ] Overlay technical indicators on price charts.
   - [ ] Create dedicated charts for on-chain metrics.
