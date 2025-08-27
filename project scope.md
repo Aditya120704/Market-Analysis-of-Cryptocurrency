@@ -203,10 +203,11 @@ This section outlines future enhancements and features for the crypto analysis a
 - [ ] **Advanced Feature Engineering:**
   - [ ] Integrate Fear & Greed Index into the prediction model.
   - [ ] Integrate Google Trends data into the prediction model.
+  - [ ] **Macroeconomic Data:** S&P 500 / Nasdaq Composite, US Dollar Index (DXY), Inflation Rates (CPI).
 - [ ] **Advanced Model Exploration:**
   - [ ] **Prophet:** Investigate for time-series with seasonal patterns.
 
-### 2. New Value-Added Features.
+### 2. New Value-Added Features
 - [ ] **Expanded Data Visualization:**
   - [ ] Create a sentiment correlation analysis to identify the most predictive indicators.
   - [ ] Display sentiment correlation analysis on the Advanced Analysis page.
