@@ -25,7 +25,7 @@ def clean_historical_dataframe(df: pd.DataFrame) -> pd.DataFrame:
         date_col = df.columns[0]
 
     # Convert date column to datetime and handle errors
-    df[date_col] = pd.to_datetime(df[date_col], utc=True, errors='coerce')
+    df[date_col] = pd.to_datetime(df[date_col], errors='coerce')
 
     # Drop rows where the date is NaT after conversion
     df = df.dropna(subset=[date_col])

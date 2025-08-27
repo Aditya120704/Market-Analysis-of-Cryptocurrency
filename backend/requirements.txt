@@ -11,3 +11,4 @@ ruptures
 numpy
 xgboost
 pandas_ta
+pytrends

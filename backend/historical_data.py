@@ -12,8 +12,9 @@ HISTORICAL_DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '
 
 from utils.data_processing import clean_historical_dataframe
 
-def get_crypto_historical_data(ticker_symbol: str, period: str = "max"):
-    file_name = f'{ticker_symbol.lower()}_historical_data.csv'
+def get_crypto_historical_data(ticker_symbol: str, period: str = "max", include_indicators: bool = False):
+    sanitized_ticker = ticker_symbol.replace('/', '_').replace(':', '_')
+    file_name = f'{sanitized_ticker.lower()}_historical_data.csv'
     file_path = os.path.join(HISTORICAL_DATA_DIR, file_name)
     
     df = None
@@ -21,46 +22,66 @@ def get_crypto_historical_data(ticker_symbol: str, period: str = "max"):
 
     if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
         try:
-            # Read the CSV
             df = pd.read_csv(file_path, index_col=0, parse_dates=True)
+            if df.index.tz is None:
+                df = df.tz_localize('UTC')
+            else:
+                df = df.tz_convert('UTC')
+            df = clean_historical_dataframe(df)
 
             if df.empty:
                 df = yf.Ticker(ticker_symbol).history(period="max")
+                if df.index.tz is None:
+                    df = df.tz_localize('UTC')
+                else:
+                    df = df.tz_convert('UTC')
                 df = clean_historical_dataframe(df)
                 df.to_csv(file_path)
             else:
-                # If data exists, proceed with incremental update logic
                 last_date = df.index.max()
                 
-                start_date = last_date + pd.Timedelta(days=1)
+                start_date = last_date - pd.Timedelta(days=1)
                 
                 if start_date.date() <= today:
                     new_data = yf.Ticker(ticker_symbol).history(start=start_date, end=today)
                     if not new_data.empty:
+                        if new_data.index.tz is None:
+                            new_data = new_data.tz_localize('UTC')
+                        else:
+                            new_data = new_data.tz_convert('UTC')
                         new_data = clean_historical_dataframe(new_data)
                         df = pd.concat([df, new_data])
-                        df = df[~df.index.duplicated(keep='last')] # Remove duplicates if any
+                        df = df[~df.index.duplicated(keep='last')]
                         df.to_csv(file_path)
-                    else:
-                        return df
-                else:
-                    pass
+
         except pd.errors.EmptyDataError:
             df = yf.Ticker(ticker_symbol).history(period="max")
+            if df.index.tz is None:
+                df = df.tz_localize('UTC')
+            else:
+                df = df.tz_convert('UTC')
             df = clean_historical_dataframe(df)
             df.to_csv(file_path)
         except Exception as e:
             print(f"ERROR: {ticker_symbol} - Error reading CSV or processing data: {e}. Attempting to fetch from yfinance.", file=sys.stderr)
             df = yf.Ticker(ticker_symbol).history(period="max")
+            if df.index.tz is None:
+                df = df.tz_localize('UTC')
+            else:
+                df = df.tz_convert('UTC')
             df = clean_historical_dataframe(df)
             df.to_csv(file_path)
     else:
         df = yf.Ticker(ticker_symbol).history(period="max")
+        if df.index.tz is None:
+            df = df.tz_localize('UTC')
+        else:
+            df = df.tz_convert('UTC')
         df = clean_historical_dataframe(df)
         df.to_csv(file_path)
 
-    if not df.empty:
-        df = calculate_all_indicators(df) # Call the new function here
+    if not df.empty and include_indicators:
+        df = calculate_all_indicators(df)
     
     return df
 

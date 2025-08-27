@@ -1,6 +1,8 @@
 NewsAPI.org: Used for fetching real-time news headlines for sentiment analysis.
 Key: 350b3451917542d6bcfeb8d4a780e197 
 
+Alternative : For Fear and Greedy Index
+ url: "https://api.alternative.me/fng/?limit=1"
 Yahoo Finance (via yfinance library): Used for fetching historical cryptocurrency price data (e.g., BTC-USD, ETH-USD) and S&P 500 data (^GSPC).
 
 CoinGecko API: Used for fetching live market data for top cryptocurrencies (e.g., current prices, market caps, 24h changes).

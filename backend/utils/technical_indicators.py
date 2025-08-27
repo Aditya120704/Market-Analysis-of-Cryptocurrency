@@ -5,11 +5,9 @@ import sys
 def calculate_all_indicators(df: pd.DataFrame) -> pd.DataFrame:
     """
     Calculates a set of common technical indicators and adds them to the DataFrame.
-    df must contain 'open', 'high', 'low', 'close', 'volume' columns.
     """
     if not all(col in df.columns for col in ['open', 'high', 'low', 'close', 'volume']):
         print("Warning: Missing OHLCV columns for full indicator calculation.", file=sys.stderr)
-        # Attempt to proceed with available data, but some indicators might fail
     
     # Moving Averages
     df['sma_7'] = df['close'].rolling(window=7).mean()
@@ -19,16 +17,21 @@ def calculate_all_indicators(df: pd.DataFrame) -> pd.DataFrame:
 
     # RSI
     delta = df['close'].diff()
-    gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-    loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-    rs = gain / loss
+    gain = delta.where(delta > 0, 0)
+    loss = -delta.where(delta < 0, 0)
+    
+    alpha = 1.0 / 14
+    avg_gain = gain.ewm(alpha=alpha, adjust=False).mean()
+    avg_loss = loss.ewm(alpha=alpha, adjust=False).mean()
+    
+    rs = avg_gain / avg_loss
     df['rsi'] = 100 - (100 / (1 + rs))
 
     # MACD
-    exp1 = df['close'].ewm(span=12, adjust=False).mean()
-    exp2 = df['close'].ewm(span=26, adjust=False).mean()
+    exp1 = df['close'].ewm(span=12, adjust=False, min_periods=12).mean()
+    exp2 = df['close'].ewm(span=26, adjust=False, min_periods=26).mean()
     df['macd'] = exp1 - exp2
-    df['signal_line'] = df['macd'].ewm(span=9, adjust=False).mean()
+    df['signal_line'] = df['macd'].ewm(span=9, adjust=False, min_periods=9).mean()
 
     # Bollinger Bands
     df['middle_band'] = df['close'].rolling(window=20).mean()
@@ -38,5 +41,17 @@ def calculate_all_indicators(df: pd.DataFrame) -> pd.DataFrame:
 
     # Drop intermediate columns
     df = df.drop(columns=['middle_band', 'std_dev'], errors='ignore')
+    
+    # Clean up data
+    indicator_columns = ['sma_7', 'ema_7', 'sma_30', 'ema_30', 'rsi', 'macd', 'signal_line', 'upper_band', 'lower_band']
+    
+    for col in indicator_columns:
+        if col in df.columns:
+            df[col] = df[col].replace([np.inf, -np.inf], np.nan)
+            df[col] = pd.to_numeric(df[col], errors='coerce')
 
     return df
+
+
+    
+
